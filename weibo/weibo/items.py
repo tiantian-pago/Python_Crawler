@@ -36,7 +36,7 @@ class UserRelationItem(Item):
     follows = Field()
     fans = Field()
 
-class WeiboItem(scrapy.Item):
+class WeiboItem(Item):
     collection = 'weibos'
     
     id = Field()

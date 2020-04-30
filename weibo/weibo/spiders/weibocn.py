@@ -5,7 +5,7 @@ from scrapy import Request, Spider
 from weibo.items import *
 
 
-class WeibocnSpider(scrapy.Spider):
+class WeibocnSpider(Spider):
     name = 'weibocn'
     allowed_domains = ['m.weibo.cn']
     user_url = 'https://m.weibo.cn/profile/info?uid={uid}'    #用户详情API
@@ -15,8 +15,8 @@ class WeibocnSpider(scrapy.Spider):
     start_users = ['2032139271','1699432410','1642512402','2258727970','1265998927'] #用户ID
 
     def start_requests(self):
-        for uid in start_users:
-            return Request(self.user_url.format(uid=uid),callback=self.parse_user)
+        for uid in self.start_users:
+            yield Request(self.user_url.format(uid=uid),callback=self.parse_user)
 
 
     def parse_user(self, response):
@@ -25,7 +25,7 @@ class WeibocnSpider(scrapy.Spider):
         :param response: Response对象
         """
         self.logger.debug(response)
-        result = jsons.load(response.txt)
+        result = json.loads(response.text)
         if result.get('data').get('user'):
             user_info = result.get('data').get('user')
             user_item = UserItem()
@@ -47,7 +47,7 @@ class WeibocnSpider(scrapy.Spider):
             yield Request(self.fan_url.format(uid=uid, since_id=1),callback=self.parse_fans,meta={'uid':uid,'since_id':1})
 
             #微博列表API调用
-            yield Request(self.weibo_url.format(uid=uid, page=1),callback=self.parse_weibos.meta={'uid':uid,'page':1})
+            yield Request(self.weibo_url.format(uid=uid, page=1),callback=self.parse_weibos,meta={'uid':uid,'page':1})
 
 
     def parse_follows(self,response):
@@ -55,8 +55,8 @@ class WeibocnSpider(scrapy.Spider):
         解析用户关注
         :param response: Response对象
         """
-        result = json.loads(response.txt)
-        if result.get('ok') and result.get('data').get('cards') and result.get('data').get('cards')[-1].get('card_group') and len(result.get('data').get('crads')):
+        result = json.loads(response.text)
+        if result.get('ok') and result.get('data').get('cards') and result.get('data').get('cards')[-1].get('card_group'):
             #解析用户
             follows = result.get('data').get('cards')[-1].get('card_group')
             for follow in follows:
@@ -71,7 +71,7 @@ class WeibocnSpider(scrapy.Spider):
             follows = [{'id':follow.get('user').get('id'),'user_name':follow.get('user').get('screen_name')} for follow in follows]
             user_relation_item['id'] = uid
             user_relation_item['follows'] = follows
-            user_relation_item['fan'] = []
+            user_relation_item['fans'] = []
             yield user_relation_item
 
             #下一页关注
@@ -84,8 +84,8 @@ class WeibocnSpider(scrapy.Spider):
         :param response: Response对象
         """
 
-        result = json.loads(response.txt)
-        if result.get('ok') and result.get('data').get('cards') and len(result.get('data').get('crads')) and result.get('data').get('crads')[-1].get('card_group'):
+        result = json.loads(response.text)
+        if result.get('ok') and result.get('data').get('cards') and result.get('data').get('crads')[-1].get('card_group'):
             #解析用户
             fans = result.get('data').get('cards')[-1].get('group_crad')
             for fan in fans:
@@ -105,7 +105,7 @@ class WeibocnSpider(scrapy.Spider):
 
             #下一页粉丝
             since_id = response.meta.get('since_id')+1
-            yield Resquest(self.fan_url.format(uid=uid,since_id=since_id),callback=self.parse_fans,meta={'uid':uid,'since_id':since_id})
+            yield Request(self.fan_url.format(uid=uid,since_id=since_id),callback=self.parse_fans,meta={'uid':uid,'since_id':since_id})
 
     def parse_weibos(self, response):
         """
@@ -113,7 +113,7 @@ class WeibocnSpider(scrapy.Spider):
         :param response: Response对象
         """
 
-        result = json.loads(response.txt)
+        result = json.loads(response.text)
         if result.get('ok') and result.get('data').get('cards'):
             weibos = result.get('data').get('cards')
             for weibo in weibos:
@@ -123,15 +123,12 @@ class WeibocnSpider(scrapy.Spider):
                     weibo_item = WeiboItem()
                     field_map = {
                             'id': 'id', 'attitudes_count': 'attitudes_count', 'comments_count': 'comments_count',
-                        'reposts_count': 'reposts_count', 'picture': 'page_info', 'pictures': 'pic_num',
+                        'reposts_count': 'reposts_count', 'picture': 'original_pic', 'pictures': 'pics',
                         'created_at': 'created_at', 'source': 'source', 'text': 'text', 'raw_text': 'obj_ext',
-                        'thumbnail': 'pic_type',
+                        'thumbnail': 'thumbnail_pic',
                             }
                     for field,attr in field_map.items():
-                        if attr=='page_info':
-                            weibo_item[field] = mblog.get(attr).get('page_pic').get('url')
-                        else
-                            weibo_item[field] = mblog.get(attr)
+                        weibo_item[field] = mblog.get(attr)
                     weibo_item['user'] = response.meta.get('uid')
                     yield weibo_item
 
@@ -139,4 +136,4 @@ class WeibocnSpider(scrapy.Spider):
             #下一页微博
             page = response.meta.get('page')+1
             uid = response.meta.get('uid')
-            yield Resquest(self.weibo_url.format(uid=uid,page=page),callback=self.parse_weibos,meta={'uid':uid,'page':page})
+            yield Request(self.weibo_url.format(uid=uid,page=page),callback=self.parse_weibos,meta={'uid':uid,'page':page})
