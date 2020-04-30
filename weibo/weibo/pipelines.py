@@ -59,8 +59,8 @@ class MongoPipeline(object):
     def open_spider(self, spider):
         self.client = pymongo.MongoClient(self.mongo_uri)
         self.db = self.client[self.mongo_db]
-        self.db[UserItem.collection].create_index(['id', pymongo.ASCENDING])
-        self.db[WeiboItem.collection].create_index(['id', pymongo.ASCENDING])
+        self.db[UserItem.collection].create_index([('id', pymongo.ASCENDING])))
+        self.db[WeiboItem.collection].create_index([('id', pymongo.ASCENDING)])
 
     def close_spider(self, spider):
         self.client.close()
@@ -72,7 +72,7 @@ class MongoPipeline(object):
         if isinstance(item, UserRelationItem):
             self.db[item.collection].update(
                     {'id': item.get('id')},
-                    {'$addToset':
+                    {'$addToSet':
                         {
                             'follows': {'$each': item.get('follows')},
                             'fans': {'$each': item.get('fans')}
