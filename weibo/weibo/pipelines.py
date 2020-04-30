@@ -9,7 +9,6 @@ import re, time
 import logging
 import pymongo
 from weibo.items import *
-import weibo.settings
 
 class TimePipeline():
     def process_time(self,item,spider):
