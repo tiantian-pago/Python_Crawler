@@ -57,9 +57,9 @@ DEFAULT_REQUEST_HEADERS = {
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    'weibo.middlewares.WeiboDownloaderMiddleware': 543,
-#}
+DOWNLOADER_MIDDLEWARES = {
+    'weibo.middlewares.ProxyMiddleware': 543,
+}
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html
@@ -99,5 +99,7 @@ ITEM_PIPELINES = {
 MONGO_URI = 'localhost'
 
 MONGO_DATABASE = 'weibo'
+
+PROXY_URL = 'http://127.0.0.1:5555/random'
 
 RETRY_HTTP_CODES = [401, 403, 408, 414, 500, 502, 503, 504]
